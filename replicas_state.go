@@ -11,24 +11,27 @@ import (
 )
 
 var (
-	replicasStateGauge = prometheus.NewGaugeVec(prometheus.GaugeOpts{
-		Name: "swarm_service_replicas_state",
-		Help: "State of service replicas",
-	}, []string{
+	replicasStateGauge *prometheus.GaugeVec
+)
+
+func configureReplicasStateGauge() {
+	labels := append([]string{
 		"stack",
 		"service",
 		"service_mode",
 		"state",
-	})
-)
+	}, customLabels...)
 
-func init() {
+	replicasStateGauge = prometheus.NewGaugeVec(prometheus.GaugeOpts{
+		Name: "swarm_service_replicas_state",
+		Help: "State of service replicas",
+	}, sanitizeLabelNames(labels))
 	prometheus.MustRegister(replicasStateGauge)
 }
 
 type taskCounter struct {
 	states map[string]float64
-	labels map[string]string
+	labels prometheus.Labels
 }
 
 func (tctr taskCounter) inc(state string) {
@@ -37,7 +40,7 @@ func (tctr taskCounter) inc(state string) {
 
 type serviceCounter map[string]map[string]taskCounter
 
-func (sctr serviceCounter) get(labels map[string]string) taskCounter {
+func (sctr serviceCounter) get(labels prometheus.Labels) taskCounter {
 	service := labels["service"]
 	version := labels["service_version"]
 
@@ -105,7 +108,7 @@ func pollReplicasState(ctx context.Context, cli *client.Client) (serviceCounter,
 	return replicas, nil
 }
 
-func getServiceLabels(ctx context.Context, cli *client.Client, task swarm.Task) (map[string]string, error) {
+func getServiceLabels(ctx context.Context, cli *client.Client, task swarm.Task) (prometheus.Labels, error) {
 	sid := task.ServiceID
 
 	if _, ok := metadataCache[sid]; !ok {
@@ -117,10 +120,14 @@ func getServiceLabels(ctx context.Context, cli *client.Client, task swarm.Task) 
 		metadataCache[sid] = buildMetadata(svc)
 	}
 
-	labels := map[string]string{
+	labels := prometheus.Labels{
 		"stack":        metadataCache[sid].stack,
 		"service":      metadataCache[sid].service,
 		"service_mode": metadataCache[sid].serviceMode,
+	}
+
+	for k, v := range metadataCache[sid].customLabels {
+		labels[k] = v
 	}
 
 	return labels, nil
@@ -130,12 +137,10 @@ func updateReplicasStateGauge(sctr serviceCounter) {
 	for _, versions := range sctr {
 		for _, tctr := range versions {
 			for state, ctr := range tctr.states {
-				replicasStateGauge.WithLabelValues(
-					tctr.labels["stack"],
-					tctr.labels["service"],
-					tctr.labels["service_mode"],
-					state,
-				).Set(ctr)
+				labels := sanitizeMetricLabels(tctr.labels)
+				labels["state"] = state
+
+				replicasStateGauge.With(labels).Set(ctr)
 			}
 		}
 	}

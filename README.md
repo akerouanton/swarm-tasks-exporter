@@ -65,6 +65,7 @@ You can use following flags to configure the exporter:
 
 * `-listen-addr <ip:port>`: IP address and port to listen to (default 0.0.0.0:8888).
 * `-poll-delay`: Delay in seconds between two polls (default 10s).
+* `-label`: Add custom labels to metrics
 * `-log-format`: How log should be formatted. Either json or text (default text).
 * `-log-level`: What's the minimum level of logs. Either debug, info, warn,
   error, fatal or panic (default info).

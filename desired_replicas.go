@@ -15,18 +15,21 @@ import (
 )
 
 var (
-	desiredReplicasGauge = prometheus.NewGaugeVec(prometheus.GaugeOpts{
-		Name: "swarm_service_desired_replicas",
-		Help: "Number of desired replicas for swarm services",
-	}, []string{
+	desiredReplicasGauge *prometheus.GaugeVec
+	nodeCount            = 0
+)
+
+func configureDesiredReplicasGauge() {
+	labels := append([]string{
 		"stack",
 		"service",
 		"service_mode",
-	})
-	nodeCount = 0
-)
+	}, customLabels...)
 
-func init() {
+	desiredReplicasGauge = prometheus.NewGaugeVec(prometheus.GaugeOpts{
+		Name: "swarm_service_desired_replicas",
+		Help: "Number of desired replicas for swarm services",
+	}, sanitizeLabelNames(labels))
 	prometheus.MustRegister(desiredReplicasGauge)
 }
 
@@ -59,11 +62,17 @@ func updateServiceReplicasGauge(svc swarm.Service, metadata serviceMetadata) {
 }
 
 func setDesiredReplicasGauge(metadata serviceMetadata, val float64) {
-	desiredReplicasGauge.With(prometheus.Labels{
+	labels := prometheus.Labels{
 		"stack":        metadata.stack,
 		"service":      metadata.service,
 		"service_mode": metadata.serviceMode,
-	}).Set(val)
+	}
+
+	for k, v := range metadata.customLabels {
+		labels[k] = v
+	}
+
+	desiredReplicasGauge.With(sanitizeMetricLabels(labels)).Set(val)
 }
 
 func listenSwarmEvents(ctx context.Context, cli *client.Client) error {
