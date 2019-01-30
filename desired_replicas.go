@@ -24,6 +24,7 @@ func configureDesiredReplicasGauge() {
 		"stack",
 		"service",
 		"service_mode",
+		"service_version",
 	}, customLabels...)
 
 	desiredReplicasGauge = prometheus.NewGaugeVec(prometheus.GaugeOpts{
@@ -63,9 +64,10 @@ func updateServiceReplicasGauge(svc swarm.Service, metadata serviceMetadata) {
 
 func setDesiredReplicasGauge(metadata serviceMetadata, val float64) {
 	labels := prometheus.Labels{
-		"stack":        metadata.stack,
-		"service":      metadata.service,
-		"service_mode": metadata.serviceMode,
+		"stack":           metadata.stack,
+		"service":         metadata.service,
+		"service_mode":    metadata.serviceMode,
+		"service_version": metadata.serviceVersion,
 	}
 
 	for k, v := range metadata.customLabels {
