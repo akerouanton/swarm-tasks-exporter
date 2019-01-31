@@ -153,13 +153,14 @@ func main() {
 	configureDesiredReplicasGauge()
 	configureReplicasStateGauge()
 
+	ctx := context.Background()
+
 	cli, err := client.NewClientWithOpts(client.FromEnv)
 	if err != nil {
 		logrus.Fatal(err)
 	}
 	defer cli.Close()
-
-	ctx := context.Background()
+	cli.NegotiateAPIVersion(ctx)
 
 	go func() {
 		if err := initDesiredReplicasGauge(ctx, cli); err != nil {

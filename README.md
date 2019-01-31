@@ -73,7 +73,5 @@ You can use following flags to configure the exporter:
 Moreover, this exporter supports the same env vars as the docker client:
 
 * `DOCKER_HOST` to set the url to the docker server
-* `DOCKER_API_VERSION` to set the version of the API to reach, leave empty for
-  latest.
 * `DOCKER_CERT_PATH` to load the TLS certificates from.
 * `DOCKER_TLS_VERIFY` to enable or disable TLS verification, off by default.
